@@ -1,6 +1,8 @@
 ```python
 import asyncio
 import logging
+import os
+from aiohttp import web
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
@@ -10,11 +12,11 @@ from aiogram.enums import ParseMode
 # ==========================================
 # CONFIGURATION 
 # ==========================================
-# Replace with your actual token
-BOT_TOKEN = "8855022906:AAFaD-L1Rxz9iDJxDjp-YiRAitkSUojWviw" 
+# Securely fetch token from Render Environment Variables
+BOT_TOKEN = os.getenv("BOT_TOKEN") 
 
-# Replace with the @username of the public test channel you just created
-CHANNEL_ID = "@alans_deals_test" 
+# Securely fetch channel ID
+CHANNEL_ID = os.getenv("CHANNEL_ID", "@alans_deals_test")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - [%(levelname)s] - %(message)s")
 logger = logging.getLogger(__name__)
@@ -116,13 +118,29 @@ async def process_rejection(callback: CallbackQuery):
 # ==========================================
 # EXECUTION
 # ==========================================
+async def handle_ping(request):
+    """Dummy web server response to keep Render health checks happy."""
+    return web.Response(text="Amazon Bot is alive and running!")
+
 async def main():
     logger.info("Starting Premium Bot Architecture...")
+    
+    # Start a dummy web server so Render doesn't crash the deploy
+    app = web.Application()
+    app.router.add_get('/', handle_ping)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    logger.info(f"Dummy web server listening on port {port}")
+
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
 ```
